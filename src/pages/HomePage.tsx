@@ -25,7 +25,7 @@ const HomePage = () => {
     setSubmitStatus({ type: null, message: '' });
 
     try {
-      const response = await fetch('/api/lead', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/lead`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -38,7 +38,23 @@ const HomePage = () => {
         })
       });
 
-      const result = await response.json();
+      // First get the response as text
+      const responseText = await response.text();
+      let result;
+      
+      // Try to parse as JSON if there's content
+      if (responseText && responseText.trim() !== '') {
+        try {
+          result = JSON.parse(responseText);
+        } catch (e) {
+          console.warn('Response was not valid JSON:', responseText);
+          // If we can't parse as JSON, use the text as the message
+          result = { message: responseText };
+        }
+      } else {
+        // If response is empty, use a default success message
+        result = { message: 'Form submitted successfully' };
+      }
 
       if (!response.ok) {
         throw new Error(result.message || 'Failed to submit form');

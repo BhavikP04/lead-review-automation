@@ -1,22 +1,33 @@
 // n8n webhook URL
 const N8N_WEBHOOK_URL = 'https://bhavikp04.app.n8n.cloud/webhook/d32622c9-6916-47d9-91d4-87a73c2efde4';
 
-export default async function handler(req, res) {
+// Helper function to set CORS headers and send JSON response
+const sendResponse = (res, statusCode, data) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
+  // Set content type to JSON
+  res.setHeader('Content-Type', 'application/json');
+  
+  // Send response with status and data
+  return res.status(statusCode).json({
+    success: statusCode >= 200 && statusCode < 300,
+    ...data
+  });
+};
+
+export default async function handler(req, res) {
   // Handle OPTIONS request (CORS preflight)
   if (req.method === 'OPTIONS') {
-    return res.status(200).json({ success: true });
+    return sendResponse(res, 200, { message: 'CORS preflight successful' });
   }
 
   // Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).json({ 
-      success: false, 
-      message: 'Method not allowed' 
+    return sendResponse(res, 405, { 
+      message: 'Method not allowed. Only POST requests are accepted.' 
     });
   }
 
@@ -25,8 +36,7 @@ export default async function handler(req, res) {
 
     // Validate required fields
     if (!name || !phone || !service || !message) {
-      return res.status(400).json({
-        success: false,
+      return sendResponse(res, 400, {
         message: 'Missing required fields: name, phone, service, and message are required'
       });
     }
@@ -41,7 +51,8 @@ export default async function handler(req, res) {
         name, 
         phone, 
         service, 
-        message 
+        message,
+        timestamp: new Date().toISOString()
       }),
     });
 
@@ -49,17 +60,16 @@ export default async function handler(req, res) {
     const textResponse = await n8nResponse.text();
     
     // Return success response with the n8n response
-    return res.status(200).json({
-      success: true,
+    return sendResponse(res, 200, {
       message: 'Form submitted successfully',
-      n8nResponse: textResponse
+      n8nResponse: textResponse,
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
     console.error('Error in /api/lead:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Failed to process your request' 
+    return sendResponse(res, 500, { 
+      message: error.message || 'Failed to process your request. Please try again later.' 
     });
   }
 }

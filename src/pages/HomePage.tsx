@@ -25,7 +25,7 @@ const HomePage = () => {
     setSubmitStatus({ type: null, message: '' });
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/lead`, {
+      const response = await fetch("https://bhavikp04.app.n8n.cloud/webhook/d32622c9-6916-47d9-91d4-87a73c2efde4", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -10,6 +10,7 @@ interface Enquiry {
   service: string;
   message: string;
   created_at: string;
+  service_taken?: boolean;
 }
 
 // Initialize Supabase client (consider moving to a separate util in future)
@@ -17,53 +18,59 @@ const supabaseUrl = 'https://xhlwrsllakhhriukzzhz.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobHdyc2xsYWtoaHJpdWt6emh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0OTI5ODMsImV4cCI6MjA2ODA2ODk4M30.GP8t6biX-RytCKc4yw27B8EARR1338KM9_hfo_R1sY4';
 const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
 
-
-
+// Sample data (fallback in case API fails)
+const sampleEnquiries: Enquiry[] = [
   {
     id: '1',
     name: 'John Doe',
     phone: '+1 (555) 123-4567',
+    email: 'john@example.com',
     message: 'Interested in website development services',
     service: 'Website Development',
     created_at: '2025-07-13T10:30:00',
-    
+    service_taken: false
   },
   {
     id: '2',
     name: 'Jane Smith',
     phone: '+1 (555) 987-6543',
+    email: 'jane@example.com',
     message: 'Need help with social media strategy',
     service: 'Social Media Management',
     created_at: '2025-07-12T15:45:00',
-    
+    service_taken: false
   },
   {
     id: '3',
     name: 'Acme Corp',
     phone: '+1 (555) 456-7890',
+    email: 'contact@acmecorp.com',
     message: 'Looking for digital marketing consultation',
     service: 'Digital Marketing',
     created_at: '2025-07-11T09:15:00',
-    
+    service_taken: false
   },
   {
     id: '4',
     name: 'Bob Johnson',
     phone: '+1 (555) 789-0123',
+    email: 'bob@example.com',
     message: 'Need a complete website redesign',
     service: 'Website Development',
     created_at: '2025-07-10T14:20:00',
-    
+    service_taken: false
   },
   {
     id: '5',
     name: 'Alice Williams',
     phone: '+1 (555) 234-5678',
+    email: 'alice@example.com',
     message: 'Interested in SEO services',
     service: 'Digital Marketing',
     created_at: '2025-07-09T11:10:00',
-    
+    service_taken: false
   }
+];
 
 const DashboardPage = () => {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
@@ -82,7 +89,8 @@ const DashboardPage = () => {
 
       if (error) {
         console.error('Error fetching enquiries:', error.message);
-        setError(error.message);
+        setError('Failed to load enquiries. Using sample data instead.');
+        setEnquiries(sampleEnquiries);
       } else if (data) {
         setEnquiries(data as Enquiry[]);
       }
@@ -93,19 +101,6 @@ const DashboardPage = () => {
     fetchEnquiries();
   }, []);
 
-  
-    
-      case 'New':
-        
-      case 'In Progress':
-        
-      case 'Contacted':
-        
-      case 'Converted':
-        
-      default:
-        
-    
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -160,8 +155,6 @@ const DashboardPage = () => {
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                     Created At
-                  </th>
-                  
                   </th>
                 </tr>
               </thead>

@@ -74,7 +74,7 @@ const sampleEnquiries: Enquiry[] = [
 
 const DashboardPage = () => {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

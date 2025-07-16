@@ -1,4 +1,10 @@
 import { useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabaseUrl = 'https://xhlwrsllakhhriukzzhz.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobHdyc2xsYWtoaHJpdWt6emh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0OTI5ODMsImV4cCI6MjA2ODA2ODk4M30.GP8t6biX-RytCKc4yw27B8EARR1338KM9_hfo_R1sY4';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const HomePage = () => {
   const [formData, setFormData] = useState({
@@ -25,39 +31,42 @@ const HomePage = () => {
     setSubmitStatus({ type: null, message: '' });
 
     try {
-      const response = await fetch("https://bhavikp04.app.n8n.cloud/webhook/d32622c9-6916-47d9-91d4-87a73c2efde4", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          phone: formData.phone,
-          service: formData.service,
-          message: formData.message
-        })
-      });
+      // 1. First save to Supabase
+      const { error: supabaseError } = await supabase
+        .from('enquiries')
+        .insert([
+          {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            service: formData.service,
+            message: formData.message,
+            service_taken: false
+          },
+        ]);
 
-      // First get the response as text
-      const responseText = await response.text();
-      let result;
-      
-      // Try to parse as JSON if there's content
-      if (responseText && responseText.trim() !== '') {
-        try {
-          result = JSON.parse(responseText);
-        } catch (e) {
-          console.warn('Response was not valid JSON:', responseText);
-          // If we can't parse as JSON, use the text as the message
-          result = { message: responseText };
-        }
-      } else {
-        // If response is empty, use a default success message
-        result = { message: 'Form submitted successfully' };
+      if (supabaseError) {
+        throw new Error('Failed to save to database. Please try again.');
       }
 
+      // 2. Then send email via Formspree
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('phone', formData.phone);
+      formDataToSend.append('service', formData.service);
+      formDataToSend.append('message', formData.message);
+
+      const response = await fetch("https://formspree.io/f/xwpqkrpr", {
+        method: 'POST',
+        body: formDataToSend,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
       if (!response.ok) {
-        throw new Error(result.message || 'Failed to submit form');
+        throw new Error('Message saved, but failed to send notification email.');
       }
 
       // Clear form on successful submission
@@ -75,7 +84,10 @@ const HomePage = () => {
       });
     } catch (error) {
       console.error('Error submitting form:', error);
-      setSubmitStatus({ type: 'error', message: 'Failed to send message. Please try again later.' });
+      setSubmitStatus({ 
+        type: 'error', 
+        message: error instanceof Error ? error.message : 'Failed to send message. Please try again later.' 
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -96,7 +108,7 @@ const HomePage = () => {
 
         {/* Contact Form */}
         <div className="bg-white py-8 px-6 shadow rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-6" action="https://formspree.io/f/xwpqkrpr" method="POST" onSubmit={handleSubmit}>
             {/* Name Field */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
@@ -125,7 +137,6 @@ const HomePage = () => {
                   id="phone"
                   name="phone"
                   type="tel"
-                  required
                   value={formData.phone}
                   onChange={handleChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"

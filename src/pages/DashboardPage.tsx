@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Mock data type for leads
-interface Lead {
+// Data model for enquiry records
+interface Enquiry {
   id: string;
   name: string;
   phone: string;
-  message: string;
+  email: string;
   service: string;
+  message: string;
   created_at: string;
-  review_status: 'New' | 'In Progress' | 'Contacted' | 'Converted';
 }
 
-// Mock data for the dashboard
-const mockLeads: Lead[] = [
+// Initialize Supabase client (consider moving to a separate util in future)
+const supabaseUrl = 'https://xhlwrsllakhhriukzzhz.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobHdyc2xsYWtoaHJpdWt6emh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI0OTI5ODMsImV4cCI6MjA2ODA2ODk4M30.GP8t6biX-RytCKc4yw27B8EARR1338KM9_hfo_R1sY4';
+const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
+
+
+
   {
     id: '1',
     name: 'John Doe',
@@ -20,7 +26,7 @@ const mockLeads: Lead[] = [
     message: 'Interested in website development services',
     service: 'Website Development',
     created_at: '2025-07-13T10:30:00',
-    review_status: 'New'
+    
   },
   {
     id: '2',
@@ -29,7 +35,7 @@ const mockLeads: Lead[] = [
     message: 'Need help with social media strategy',
     service: 'Social Media Management',
     created_at: '2025-07-12T15:45:00',
-    review_status: 'In Progress'
+    
   },
   {
     id: '3',
@@ -38,7 +44,7 @@ const mockLeads: Lead[] = [
     message: 'Looking for digital marketing consultation',
     service: 'Digital Marketing',
     created_at: '2025-07-11T09:15:00',
-    review_status: 'Contacted'
+    
   },
   {
     id: '4',
@@ -47,7 +53,7 @@ const mockLeads: Lead[] = [
     message: 'Need a complete website redesign',
     service: 'Website Development',
     created_at: '2025-07-10T14:20:00',
-    review_status: 'Converted'
+    
   },
   {
     id: '5',
@@ -56,46 +62,50 @@ const mockLeads: Lead[] = [
     message: 'Interested in SEO services',
     service: 'Digital Marketing',
     created_at: '2025-07-09T11:10:00',
-    review_status: 'In Progress'
+    
   }
-];
 
 const DashboardPage = () => {
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API call to fetch leads
-    const fetchLeads = async () => {
-      try {
-        // In a real app, this would be an actual API call
-        // const { data, error } = await supabase.from('leads').select('*');
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-        setLeads(mockLeads);
-      } catch (error) {
-        console.error('Error fetching leads:', error);
-      } finally {
-        setIsLoading(false);
+    const fetchEnquiries = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      const { data, error } = await supabase
+        .from('enquiries')
+        .select('id, created_at, name, phone, email, service, message')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching enquiries:', error.message);
+        setError(error.message);
+      } else if (data) {
+        setEnquiries(data as Enquiry[]);
       }
+
+      setIsLoading(false);
     };
 
-    fetchLeads();
+    fetchEnquiries();
   }, []);
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
+  
+    
       case 'New':
-        return 'bg-blue-100 text-blue-800';
+        
       case 'In Progress':
-        return 'bg-yellow-100 text-yellow-800';
+        
       case 'Contacted':
-        return 'bg-purple-100 text-purple-800';
+        
       case 'Converted':
-        return 'bg-green-100 text-green-800';
+        
       default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+        
+    
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -136,6 +146,12 @@ const DashboardPage = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Phone
                   </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                    Email
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Service
+                  </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                     Message
                   </th>
@@ -145,41 +161,39 @@ const DashboardPage = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                     Created At
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                  
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {leads.length > 0 ? (
-                  leads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-gray-50">
+                {enquiries.length > 0 ? (
+                  enquiries.map((enquiry) => (
+                    <tr key={enquiry.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{lead.name}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{lead.phone}</div>
-                      </td>
-                      <td className="px-6 py-4 hidden md:table-cell">
-                        <div className="text-sm text-gray-500 max-w-xs truncate">{lead.message}</div>
+                        <div className="text-sm font-medium text-gray-900">{enquiry.name}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{lead.service}</div>
+                        <div className="text-sm text-gray-900">{enquiry.phone}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap hidden sm:table-cell">
-                        <div className="text-sm text-gray-500">{formatDate(lead.created_at)}</div>
+                      <td className="px-6 py-4 hidden lg:table-cell">
+                        <div className="text-sm text-gray-500 max-w-xs truncate">{enquiry.email}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(lead.review_status)}`}>
-                          {lead.review_status}
-                        </span>
+                        <div className="text-sm text-gray-900">{enquiry.service}</div>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                        <div className="text-sm text-gray-500">{enquiry.message}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{formatDate(enquiry.created_at)}</div>
+                      </td>
+                      
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                      No leads found.
+                      No enquiries yet.
                     </td>
                   </tr>
                 )}
